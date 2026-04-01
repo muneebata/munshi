@@ -58,21 +58,25 @@ Rules:
 - Focus on the changes that will most move a persuadable audience.`;
 
 app.post('/api/analyze', async (req, res) => {
-  const { text } = req.body;
+  const { text, docType, venue } = req.body;
 
   if (!text || text.trim().length < 50) {
     return res.status(400).json({ error: 'Please provide a document of at least 50 characters.' });
   }
 
+  const contextLine = (docType || venue)
+    ? '\n\nCONTEXT: This is a ' + (docType || 'document') + (venue ? ' being delivered to ' + venue : '') + '. Every suggestion must be appropriate for this specific format and venue. Do not recommend actions that are inappropriate for the context — for example, do not tell a congressional witness to contact their representative, do not suggest a newspaper op-ed writer address a legislative body directly.'
+    : '';
+
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + contextLine,
       messages: [
         {
           role: 'user',
-          content: `Analyze this draft for message research opportunities:\n\n${text}`
+          content: 'Analyze this draft for message research opportunities:\n\n' + text
         }
       ]
     });

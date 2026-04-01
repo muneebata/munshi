@@ -125,6 +125,34 @@
 
     textarea::placeholder { color: #B8B2AA; }
 
+    .context-row {
+      display: flex;
+      gap: 8px;
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      background: white;
+      flex-shrink: 0;
+    }
+
+    .context-row select {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 12px;
+      font-family: inherit;
+      color: var(--text-muted);
+      background: white;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236B6560'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+
+    .context-row select:focus { outline: none; border-color: var(--gold); }
+
     .pane-footer {
       padding: 12px 18px;
       border-top: 1px solid var(--border);
@@ -612,6 +640,27 @@
       placeholder="Paste your speech, testimony, op-ed, or press release here…"
       spellcheck="true"
     ></textarea>
+    <div class="context-row">
+      <select id="docType">
+        <option value="">Document type…</option>
+        <option value="congressional testimony">Congressional Testimony</option>
+        <option value="op-ed">Op-Ed</option>
+        <option value="speech">Speech</option>
+        <option value="press release">Press Release</option>
+        <option value="public statement">Public Statement</option>
+        <option value="remarks">Remarks</option>
+      </select>
+      <select id="venue">
+        <option value="">Venue / audience…</option>
+        <option value="a congressional committee">Congressional Committee</option>
+        <option value="a general newspaper readership">Newspaper / Publication</option>
+        <option value="a press briefing">Press Briefing</option>
+        <option value="a public event">Public Event</option>
+        <option value="a corporate announcement">Corporate Announcement</option>
+        <option value="a nonprofit or advocacy audience">Nonprofit / Advocacy</option>
+        <option value="an inauguration or major ceremony">Inauguration / Ceremony</option>
+      </select>
+    </div>
     <div class="pane-footer">
       <button class="sample-link" onclick="loadSample()">Load sample testimony →</button>
       <button class="btn-analyze" id="analyzeBtn" onclick="handleSubmit()">
@@ -628,13 +677,7 @@
     <div class="tab-bar" id="tabBar" style="display:none;">
       <button class="tab active" id="reviewTab" onclick="setTab('review')">Review</button>
       <button class="tab" id="finalTab" onclick="setTab('final')">Final Draft</button>
-      <div class="tab-actions" id="reviewActions">
-        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
-        <button class="filter-btn" onclick="setFilter('word_choice', this)">Word Choice</button>
-        <button class="filter-btn" onclick="setFilter('structure', this)">Structure</button>
-        <button class="filter-btn" onclick="setFilter('framing', this)">Framing</button>
-        <button class="filter-btn" onclick="setFilter('tone', this)">Tone</button>
-      </div>
+      <div class="tab-actions" id="reviewActions"></div>
       <div class="tab-actions" id="finalActions" style="display:none;">
         <button class="btn-sm" id="polishBtn" onclick="handlePolish()">Polish with Style Guide</button>
         <button class="btn-sm" onclick="copyFinal()">Copy Draft</button>
@@ -717,7 +760,7 @@
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text: text, docType: document.getElementById('docType').value, venue: document.getElementById('venue').value })
       });
 
       const data = await res.json();
