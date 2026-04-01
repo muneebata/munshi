@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Munshi — Message Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0D1B2A;
+      --navy-mid: #1B2E45;
+      --navy-light: #2A4460;
+      --gold: #C9A84C;
+      --gold-pale: rgba(201, 168, 76, 0.12);
+      --bg: #F4F2ED;
+      --bg-card: #FAFAF8;
+      --border: #DDD9D0;
+      --text: #1A1A1A;
+      --text-muted: #6B6560;
+      --high: #C0392B;
+      --high-bg: rgba(192, 57, 43, 0.1);
+      --high-border: rgba(192, 57, 43, 0.35);
+      --med: #B7770D;
+      --med-bg: rgba(183, 119, 13, 0.1);
+      --med-border: rgba(183, 119, 13, 0.35);
+      --low: #1A6DA8;
+      --low-bg: rgba(26, 109, 168, 0.1);
+      --low-border: rgba(26, 109, 168, 0.35);
+      --accepted-bg: rgba(39, 174, 96, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      padding: 0 28px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-mark { width: 26px; height: 26px; flex-shrink: 0; }
+
+    .logo-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+    }
+
+    .tagline {
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.38);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Workspace ── */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left Pane ── */
+    .pane-left {
+      width: 46%;
+      min-width: 380px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: white;
+    }
+
+    .pane-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .pane-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .char-count { font-size: 11px; color: var(--text-muted); }
+
+    textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text);
+      background: white;
+    }
+
+    textarea::placeholder { color: #B8B2AA; }
+
+    .pane-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: white;
+    }
+
+    .sample-link {
+      font-size: 12px;
+      color: var(--gold);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+    }
+
+    .sample-link:hover { text-decoration: underline; }
+
+    .btn-analyze {
+      background: var(--navy);
+      color: white;
+      border: none;
+      padding: 9px 22px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+
+    .btn-analyze:hover:not(:disabled) { background: var(--navy-mid); }
+    .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-polish {
+      background: transparent;
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      padding: 9px 22px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .btn-polish:hover:not(:disabled) { background: var(--gold-pale); }
+    .btn-polish:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-polish .spinner {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(201,168,76,0.3);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    .btn-polish.loading .spinner { display: block; }
+    .btn-polish.loading .btn-text::after { content: 'Polishing…'; }
+    .btn-polish:not(.loading) .btn-text::after { content: 'Polish Draft'; }
+
+    .btn-analyze .spinner {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    .btn-analyze.loading .spinner { display: block; }
+    .btn-analyze.loading .btn-text::after { content: 'Analyzing…'; }
+    .btn-analyze:not(.loading) .btn-text::after { content: 'Analyze Draft'; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Right Pane ── */
+    .pane-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-card);
+    }
+
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: white;
+      flex-shrink: 0;
+      padding: 0 18px;
+      align-items: flex-end;
+      gap: 0;
+    }
+
+    .tab {
+      padding: 11px 16px 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+      margin-bottom: -1px;
+    }
+
+    .tab:hover { color: var(--navy); }
+
+    .tab.active {
+      color: var(--navy);
+      border-bottom-color: var(--gold);
+      font-weight: 600;
+    }
+
+    .tab-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 8px;
+    }
+
+    .filter-btn {
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+    }
+
+    .filter-btn:hover { border-color: var(--gold); color: var(--text); }
+
+    .filter-btn.active {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: white;
+    }
+
+    .btn-sm {
+      padding: 4px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+    }
+
+    .btn-sm:hover { border-color: var(--navy); color: var(--navy); }
+
+    /* ── Output Scroll ── */
+    .output-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: var(--text-muted);
+      gap: 12px;
+    }
+
+    .empty-icon { width: 44px; height: 44px; opacity: 0.18; }
+
+    .empty-state h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--navy);
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      max-width: 270px;
+      line-height: 1.65;
+    }
+
+    /* ── Loading ── */
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 14px;
+    }
+
+    .loading-state.visible { display: flex; }
+
+    .loading-bar {
+      width: 180px; height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 2px;
+      animation: loading-sweep 1.8s ease-in-out infinite;
+    }
+
+    @keyframes loading-sweep {
+      0% { width: 0%; margin-left: 0%; }
+      50% { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    .loading-text { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+    /* ── Tone Bar ── */
+    .tone-bar {
+      background: var(--navy);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .tone-sentence {
+      flex: 1;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .tone-sentence + .tone-sentence {
+      border-left: 1px solid rgba(255,255,255,0.12);
+      padding-left: 16px;
+    }
+
+    .tone-label {
+      display: block;
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    /* ── Annotated Text ── */
+    .annotated-text {
+      font-size: 14.5px;
+      line-height: 1.85;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .highlight {
+      cursor: pointer;
+      border-radius: 2px;
+      padding: 1px 0;
+      transition: filter 0.1s;
+    }
+
+    .highlight.high {
+      background: var(--high-bg);
+      border-bottom: 2px solid var(--high);
+    }
+
+    .highlight.medium {
+      background: var(--med-bg);
+      border-bottom: 2px solid var(--med);
+    }
+
+    .highlight.low {
+      background: var(--low-bg);
+      border-bottom: 2px solid var(--low);
+    }
+
+    .highlight.accepted {
+      background: var(--accepted-bg);
+      border-bottom: 2px solid #27AE60;
+      text-decoration: line-through;
+      opacity: 0.65;
+      cursor: default;
+    }
+
+    .highlight.rejected {
+      background: none;
+      border-bottom: none;
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .highlight:not(.accepted):not(.rejected):hover { filter: brightness(0.9); }
+
+    .highlight.hidden { display: none !important; }
+
+    /* ── Final Draft View ── */
+    .final-text {
+      font-size: 14.5px;
+      line-height: 1.85;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .final-text ins {
+      text-decoration: none;
+      background: rgba(39, 174, 96, 0.15);
+      color: #1a7a3c;
+      border-radius: 2px;
+      padding: 0 2px;
+      font-style: normal;
+    }
+
+    /* ── Suggestion Card ── */
+    .suggestion-card {
+      position: fixed;
+      z-index: 1000;
+      width: 340px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.06);
+      padding: 16px;
+      display: none;
+    }
+
+    .suggestion-card.visible { display: block; }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .card-category {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .cat-word_choice { background: rgba(142,68,173,0.1); color: #8E44AD; }
+    .cat-structure   { background: rgba(52,152,219,0.1); color: #2980B9; }
+    .cat-framing     { background: rgba(39,174,96,0.1);  color: #27AE60; }
+    .cat-tone        { background: rgba(230,126,34,0.1); color: #E67E22; }
+
+    .severity-badge {
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .sev-high   { background: var(--high-bg); color: var(--high); }
+    .sev-medium { background: var(--med-bg);  color: var(--med); }
+    .sev-low    { background: var(--low-bg);  color: var(--low); }
+
+    /* Turnitin-style: original first */
+    .card-flagged {
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--text);
+      border-left: 3px solid var(--border);
+      font-style: italic;
+    }
+
+    .card-flagged.high   { border-left-color: var(--high); background: var(--high-bg); }
+    .card-flagged.medium { border-left-color: var(--med);  background: var(--med-bg); }
+    .card-flagged.low    { border-left-color: var(--low);  background: var(--low-bg); }
+
+    .card-arrow-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .card-arrow-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .card-arrow-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .card-replacement {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+
+    .card-rationale {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-actions { display: flex; gap: 8px; }
+
+    .btn-accept, .btn-reject {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: all 0.12s;
+    }
+
+    .btn-accept { background: var(--navy); color: white; }
+    .btn-accept:hover { background: var(--navy-mid); }
+
+    .btn-reject {
+      background: var(--bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-reject:hover { border-color: var(--high); color: var(--high); }
+
+    .card-close {
+      position: absolute;
+      top: 10px; right: 12px;
+      background: none; border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 17px;
+      line-height: 1;
+    }
+    .card-close:hover { color: var(--text); }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg class="logo-mark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,4 58.3,32.8 85.4,19.1 71.7,46.2 100,50 71.7,53.8 85.4,80.9 58.3,67.2 50,96 41.7,67.2 14.6,80.9 28.3,53.8 0,50 28.3,46.2 14.6,19.1 41.7,32.8" fill="#C9A84C"/>
+      <circle cx="50" cy="37" r="8" fill="#0D1B2A"/>
+      <circle cx="50" cy="63" r="8" fill="#0D1B2A"/>
+      <circle cx="37" cy="50" r="8" fill="#0D1B2A"/>
+      <circle cx="63" cy="50" r="8" fill="#0D1B2A"/>
+      <circle cx="50" cy="50" r="4" fill="#C9A84C"/>
+    </svg>
+    <span class="logo-name">MUNSHI</span>
+  </div>
+  <span class="tagline">Your public image matters and every word counts.</span>
+</header>
+
+<div class="workspace">
+
+  <!-- Left: Input -->
+  <div class="pane-left">
+    <div class="pane-header">
+      <span class="pane-label">Your Draft</span>
+      <span class="char-count" id="charCount">0 words</span>
+    </div>
+    <textarea
+      id="draftInput"
+      placeholder="Paste your speech, testimony, op-ed, or press release here…"
+      spellcheck="true"
+    ></textarea>
+    <div class="pane-footer">
+      <button class="sample-link" onclick="loadSample()">Load sample testimony →</button>
+      <button class="btn-analyze" id="analyzeBtn" onclick="handleSubmit()">
+        <div class="spinner"></div>
+        <span class="btn-text"></span>
+      </button>
+      <button class="btn-polish" id="polishBtn" onclick="handlePolish()">
+        <div class="spinner"></div>
+        <span class="btn-text"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Right: Output -->
+  <div class="pane-right">
+
+    <!-- Tab bar (hidden until results) -->
+    <div class="tab-bar" id="tabBar" style="display:none;">
+      <button class="tab active" id="reviewTab" onclick="setTab('review')">Review</button>
+      <button class="tab" id="finalTab" onclick="setTab('final')">Final Draft</button>
+      <button class="tab" id="polishedTab" onclick="setTab('polished')">Polished</button>
+      <div class="tab-actions" id="reviewActions">
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter('word_choice', this)">Word Choice</button>
+        <button class="filter-btn" onclick="setFilter('structure', this)">Structure</button>
+        <button class="filter-btn" onclick="setFilter('framing', this)">Framing</button>
+        <button class="filter-btn" onclick="setFilter('tone', this)">Tone</button>
+      </div>
+      <div class="tab-actions" id="finalActions" style="display:none;">
+        <button class="btn-sm" onclick="copyRevised()">Copy Draft</button>
+      </div>
+      <div class="tab-actions" id="polishedActions" style="display:none;">
+        <button class="btn-sm" onclick="copyPolished()">Copy Draft</button>
+      </div>
+    </div>
+
+    <div class="output-scroll" id="outputScroll">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <svg class="empty-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="50,4 58.3,32.8 85.4,19.1 71.7,46.2 100,50 71.7,53.8 85.4,80.9 58.3,67.2 50,96 41.7,67.2 14.6,80.9 28.3,53.8 0,50 28.3,46.2 14.6,19.1 41.7,32.8" fill="#0D1B2A"/>
+        </svg>
+        <h3>Message Intelligence</h3>
+        <p>Paste your draft and Munshi will identify language improvements grounded in empirical message research.</p>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading-state" id="loadingState">
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        <div class="loading-text">Analyzing message research opportunities…</div>
+      </div>
+
+      <!-- Review tab content -->
+      <div id="reviewView" style="display:none;">
+        <div class="tone-bar" id="toneBar"></div>
+        <div class="annotated-text" id="annotatedText"></div>
+      </div>
+
+      <!-- Final Draft tab content -->
+      <div id="finalView" style="display:none;">
+        <div class="final-text" id="finalText"></div>
+      </div>
+
+      <!-- Polished tab content -->
+      <div id="polishedView" style="display:none;">
+        <div class="final-text" id="polishedText"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Suggestion Card -->
+<div class="suggestion-card" id="suggestionCard">
+  <button class="card-close" onclick="closeCard()">×</button>
+  <div id="cardContent"></div>
+</div>
+
+<script>
+  let currentText = '';
+  let currentSuggestions = [];
+  let currentAssessment = '';
+  let accepted = new Set();
+  let rejected = new Set();
+  let activeFilter = 'all';
+  let activeTab = 'review';
+  let activeCardIndex = -1;
+
+  // Word count
+  const draftInput = document.getElementById('draftInput');
+  draftInput.addEventListener('input', () => {
+    const words = draftInput.value.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('charCount').textContent = words + (words === 1 ? ' word' : ' words');
+  });
+
+  // Submit
+  async function handleSubmit() {
+    const text = draftInput.value.trim();
+    if (!text || text.length < 50) {
+      alert('Please paste a document before analyzing.');
+      return;
+    }
+
+    currentText = text;
+    accepted = new Set();
+    rejected = new Set();
+    activeFilter = 'all';
+    activeTab = 'review';
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed.');
+
+      currentSuggestions = data.suggestions || [];
+      currentAssessment = data.overall_assessment || '';
+      renderResults();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = on;
+    btn.classList.toggle('loading', on);
+    if (on) {
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('reviewView').style.display = 'none';
+      document.getElementById('finalView').style.display = 'none';
+      document.getElementById('tabBar').style.display = 'none';
+      document.getElementById('loadingState').classList.add('visible');
+    } else {
+      document.getElementById('loadingState').classList.remove('visible');
+    }
+  }
+
+  async function handlePolish() {
+    const text = draftInput.value.trim();
+    if (!text || text.length < 50) {
+      alert('Please paste a document before polishing.');
+      return;
+    }
+    const btn = document.getElementById('polishBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    try {
+      const res = await fetch('/api/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Polishing failed.');
+      document.getElementById('polishedText').textContent = data.draft;
+      document.getElementById('tabBar').style.display = 'flex';
+      document.getElementById('emptyState').style.display = 'none';
+      setTab('polished');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  }
+
+  function renderResults() {
+    document.getElementById('loadingState').classList.remove('visible');
+    document.getElementById('tabBar').style.display = 'flex';
+    closeCard();
+    setTab('review');
+  }
+
+  // Tabs
+  function setTab(tab) {
+    activeTab = tab;
+    document.getElementById('reviewTab').classList.toggle('active', tab === 'review');
+    document.getElementById('finalTab').classList.toggle('active', tab === 'final');
+    document.getElementById('polishedTab').classList.toggle('active', tab === 'polished');
+    document.getElementById('reviewActions').style.display = tab === 'review' ? 'flex' : 'none';
+    document.getElementById('finalActions').style.display = tab === 'final' ? 'flex' : 'none';
+    document.getElementById('polishedActions').style.display = tab === 'polished' ? 'flex' : 'none';
+    document.getElementById('reviewView').style.display = tab === 'review' ? 'block' : 'none';
+    document.getElementById('finalView').style.display = tab === 'final' ? 'block' : 'none';
+    document.getElementById('polishedView').style.display = tab === 'polished' ? 'block' : 'none';
+    if (tab === 'review') { renderToneBar(); renderAnnotated(); }
+    if (tab === 'final') { renderFinalDraft(); }
+  }
+
+  function copyPolished() {
+    var text = document.getElementById('polishedText').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = event.target;
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  }
+
+  // Tone bar (2-sentence feedback split visually)
+  function renderToneBar() {
+    if (!currentAssessment) return;
+
+    // Split into two sentences
+    const sentenceMatch = currentAssessment.match(/^(.+?[.!?])\s+(.+)$/s);
+    let s1 = currentAssessment;
+    let s2 = '';
+
+    if (sentenceMatch) {
+      s1 = sentenceMatch[1].trim();
+      s2 = sentenceMatch[2].trim();
+    }
+
+    document.getElementById('toneBar').innerHTML = `
+      <div class="tone-sentence">
+        <span class="tone-label">Message</span>
+        ${escHtml(s1)}
+      </div>
+      ${s2 ? `<div class="tone-sentence">
+        <span class="tone-label">Tone</span>
+        ${escHtml(s2)}
+      </div>` : ''}
+    `;
+  }
+
+  // Annotated text
+  function renderAnnotated() {
+    const matches = [];
+    for (let i = 0; i < currentSuggestions.length; i++) {
+      const s = currentSuggestions[i];
+      const idx = currentText.indexOf(s.original);
+      if (idx !== -1) matches.push({ start: idx, end: idx + s.original.length, index: i });
+    }
+
+    matches.sort((a, b) => a.start - b.start);
+    const filtered = [];
+    let lastEnd = 0;
+    for (const m of matches) {
+      if (m.start >= lastEnd) { filtered.push(m); lastEnd = m.end; }
+    }
+
+    let html = '';
+    let pos = 0;
+
+    for (const m of filtered) {
+      const s = currentSuggestions[m.index];
+      const isAccepted = accepted.has(m.index);
+      const isRejected = rejected.has(m.index);
+      const hidden = activeFilter !== 'all' && s.category !== activeFilter;
+
+      const classes = [
+        'highlight',
+        s.severity,
+        isAccepted ? 'accepted' : '',
+        isRejected ? 'rejected' : '',
+        hidden ? 'hidden' : ''
+      ].filter(Boolean).join(' ');
+
+      html += escHtml(currentText.slice(pos, m.start));
+      html += `<span class="${classes}" data-idx="${m.index}" onclick="onHighlightClick(${m.index}, event)">${escHtml(s.original)}</span>`;
+      pos = m.end;
+    }
+
+    html += escHtml(currentText.slice(pos));
+    document.getElementById('annotatedText').innerHTML = html;
+  }
+
+  // Final draft — applies all suggestions except explicitly dismissed ones
+  function renderFinalDraft() {
+    const toApply = currentSuggestions
+      .map((s, i) => ({ i, s }))
+      .filter(({ i, s }) => !rejected.has(i) && s && currentText.indexOf(s.original) !== -1);
+
+    // Build replacements sorted by position in original text
+    const replacements = [];
+    for (const { s } of toApply) {
+      const idx = currentText.indexOf(s.original);
+      if (idx !== -1) replacements.push({ idx, original: s.original, replacement: s.replacement });
+    }
+
+    // Sort and remove overlaps
+    replacements.sort((a, b) => a.idx - b.idx);
+    const filtered = [];
+    let lastEnd = 0;
+    for (const r of replacements) {
+      if (r.idx >= lastEnd) { filtered.push(r); lastEnd = r.idx + r.original.length; }
+    }
+
+    let html = '';
+    let cursor = 0;
+
+    for (const r of filtered) {
+      html += escHtml(currentText.slice(cursor, r.idx));
+      html += `<ins>${escHtml(r.replacement)}</ins>`;
+      cursor = r.idx + r.original.length;
+    }
+
+    html += escHtml(currentText.slice(cursor));
+    document.getElementById('finalText').innerHTML = html;
+  }
+
+  // Suggestion card
+  function onHighlightClick(idx, event) {
+    if (rejected.has(idx) || accepted.has(idx)) return;
+    event.stopPropagation();
+    if (activeCardIndex === idx) { closeCard(); return; }
+    showCard(idx, event);
+  }
+
+  function showCard(idx, event) {
+    activeCardIndex = idx;
+    const s = currentSuggestions[idx];
+    const catLabel = s.category.replace('_', ' ');
+
+    document.getElementById('cardContent').innerHTML = `
+      <div class="card-meta">
+        <span class="card-category cat-${s.category}">${catLabel}</span>
+        <span class="severity-badge sev-${s.severity}">${s.severity}</span>
+      </div>
+      <div class="card-flagged ${s.severity}">${escHtml(s.original)}</div>
+      <div class="card-arrow-row">
+        <span class="card-arrow-label">Suggested edit</span>
+        <div class="card-arrow-line"></div>
+      </div>
+      <div class="card-replacement">${escHtml(s.replacement)}</div>
+      <div class="card-rationale">${escHtml(s.rationale)}</div>
+      <div class="card-actions">
+        <button class="btn-accept" onclick="acceptSuggestion(${idx})">Accept</button>
+        <button class="btn-reject" onclick="rejectSuggestion(${idx})">Dismiss</button>
+      </div>
+    `;
+
+    const card = document.getElementById('suggestionCard');
+    card.classList.add('visible');
+
+    const cw = 340, ch = 320, margin = 12;
+    let x = event.clientX + margin;
+    let y = event.clientY + margin;
+    if (x + cw > window.innerWidth - margin) x = event.clientX - cw - margin;
+    if (y + ch > window.innerHeight - margin) y = event.clientY - ch - margin;
+    if (y < margin) y = margin;
+    if (x < margin) x = margin;
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+  }
+
+  function closeCard() {
+    activeCardIndex = -1;
+    document.getElementById('suggestionCard').classList.remove('visible');
+  }
+
+  document.addEventListener('click', e => {
+    const card = document.getElementById('suggestionCard');
+    if (!card.contains(e.target) && !e.target.classList.contains('highlight')) closeCard();
+  });
+
+  function acceptSuggestion(idx) {
+    accepted.add(idx);
+    rejected.delete(idx);
+    closeCard();
+    if (activeTab === 'review') renderAnnotated();
+  }
+
+  function rejectSuggestion(idx) {
+    rejected.add(idx);
+    accepted.delete(idx);
+    closeCard();
+    if (activeTab === 'review') renderAnnotated();
+  }
+
+  function setFilter(cat, btn) {
+    activeFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAnnotated();
+  }
+
+  function copyRevised() {
+    const toApply = currentSuggestions
+      .map((s, i) => ({ i, s }))
+      .filter(({ i, s }) => !rejected.has(i) && s && currentText.indexOf(s.original) !== -1)
+      .sort((a, b) => currentText.indexOf(b.s.original) - currentText.indexOf(a.s.original));
+
+    let text = currentText;
+    for (const { s } of toApply) {
+      text = text.replace(s.original, s.replacement);
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  function loadSample() {
+    var sample = "The proposed legislation may potentially result in significant reductions to Medicare benefits for senior citizens and other vulnerable populations who are currently reliant on these programs for their healthcare needs. It is our belief that the decision-makers who are responsible for this policy should be made aware of the serious concerns that have been raised by advocacy groups and individual constituents alike.\n\nThe policy in question would adversely impact access to prescription medications, potentially forcing some beneficiaries to make difficult choices between their medical needs and other basic necessities. There could be significant consequences for the healthcare system if these reductions are implemented, including increased emergency room utilization and hospitalizations.\n\nWe respectfully urge Congress to reconsider this approach and work toward solutions that protect the healthcare security of those who have worked their entire lives with the expectation of these guaranteed benefits.";
+    draftInput.value = sample;
+    var words = sample.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('charCount').textContent = words + ' words';
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
