@@ -165,37 +165,7 @@
     .btn-analyze:hover:not(:disabled) { background: var(--navy-mid); }
     .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-polish {
-      background: transparent;
-      color: var(--gold);
-      border: 1px solid var(--gold);
-      padding: 9px 22px;
-      border-radius: 6px;
-      font-size: 13.5px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: inherit;
-      transition: all 0.15s;
-    }
-
-    .btn-polish:hover:not(:disabled) { background: var(--gold-pale); }
-    .btn-polish:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .btn-polish .spinner {
-      width: 13px; height: 13px;
-      border: 2px solid rgba(201,168,76,0.3);
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: none;
-    }
-
-    .btn-polish.loading .spinner { display: block; }
-    .btn-polish.loading .btn-text::after { content: 'Polishing…'; }
-    .btn-polish:not(.loading) .btn-text::after { content: 'Polish Draft'; }
+    .btn-sm.loading { opacity: 0.6; cursor: not-allowed; }
 
     .btn-analyze .spinner {
       width: 13px; height: 13px;
@@ -648,10 +618,6 @@
         <div class="spinner"></div>
         <span class="btn-text"></span>
       </button>
-      <button class="btn-polish" id="polishBtn" onclick="handlePolish()">
-        <div class="spinner"></div>
-        <span class="btn-text"></span>
-      </button>
     </div>
   </div>
 
@@ -662,7 +628,6 @@
     <div class="tab-bar" id="tabBar" style="display:none;">
       <button class="tab active" id="reviewTab" onclick="setTab('review')">Review</button>
       <button class="tab" id="finalTab" onclick="setTab('final')">Final Draft</button>
-      <button class="tab" id="polishedTab" onclick="setTab('polished')">Polished</button>
       <div class="tab-actions" id="reviewActions">
         <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
         <button class="filter-btn" onclick="setFilter('word_choice', this)">Word Choice</button>
@@ -671,10 +636,8 @@
         <button class="filter-btn" onclick="setFilter('tone', this)">Tone</button>
       </div>
       <div class="tab-actions" id="finalActions" style="display:none;">
-        <button class="btn-sm" onclick="copyRevised()">Copy Draft</button>
-      </div>
-      <div class="tab-actions" id="polishedActions" style="display:none;">
-        <button class="btn-sm" onclick="copyPolished()">Copy Draft</button>
+        <button class="btn-sm" id="polishBtn" onclick="handlePolish()">Polish with Style Guide</button>
+        <button class="btn-sm" onclick="copyFinal()">Copy Draft</button>
       </div>
     </div>
 
@@ -706,10 +669,6 @@
         <div class="final-text" id="finalText"></div>
       </div>
 
-      <!-- Polished tab content -->
-      <div id="polishedView" style="display:none;">
-        <div class="final-text" id="polishedText"></div>
-      </div>
 
     </div>
   </div>
@@ -790,29 +749,30 @@
   }
 
   async function handlePolish() {
-    const text = draftInput.value.trim();
-    if (!text || text.length < 50) {
-      alert('Please paste a document before polishing.');
-      return;
-    }
-    const btn = document.getElementById('polishBtn');
+    var btn = document.getElementById('polishBtn');
+    var origText = btn.textContent;
     btn.disabled = true;
     btn.classList.add('loading');
+    btn.textContent = 'Polishing…';
+
+    // Build the current final draft text (accepted changes applied)
+    var text = getFinalDraftText();
+
     try {
-      const res = await fetch('/api/draft', {
+      var res = await fetch('/api/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text: text })
       });
-      const data = await res.json();
+      var data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Polishing failed.');
-      document.getElementById('polishedText').textContent = data.draft;
-      document.getElementById('tabBar').style.display = 'flex';
-      document.getElementById('emptyState').style.display = 'none';
-      setTab('polished');
+      // Replace final draft content with polished version
+      document.getElementById('finalText').textContent = data.draft;
+      btn.textContent = 'Polished';
+      btn.disabled = true;
     } catch (err) {
       alert('Error: ' + err.message);
-    } finally {
+      btn.textContent = origText;
       btn.disabled = false;
       btn.classList.remove('loading');
     }
@@ -830,19 +790,34 @@
     activeTab = tab;
     document.getElementById('reviewTab').classList.toggle('active', tab === 'review');
     document.getElementById('finalTab').classList.toggle('active', tab === 'final');
-    document.getElementById('polishedTab').classList.toggle('active', tab === 'polished');
     document.getElementById('reviewActions').style.display = tab === 'review' ? 'flex' : 'none';
     document.getElementById('finalActions').style.display = tab === 'final' ? 'flex' : 'none';
-    document.getElementById('polishedActions').style.display = tab === 'polished' ? 'flex' : 'none';
     document.getElementById('reviewView').style.display = tab === 'review' ? 'block' : 'none';
     document.getElementById('finalView').style.display = tab === 'final' ? 'block' : 'none';
-    document.getElementById('polishedView').style.display = tab === 'polished' ? 'block' : 'none';
     if (tab === 'review') { renderToneBar(); renderAnnotated(); }
-    if (tab === 'final') { renderFinalDraft(); }
+    if (tab === 'final') {
+      renderFinalDraft();
+      // Reset polish button when switching to final tab
+      var btn = document.getElementById('polishBtn');
+      btn.textContent = 'Polish with Style Guide';
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
   }
 
-  function copyPolished() {
-    var text = document.getElementById('polishedText').textContent;
+  // Get plain text of final draft (with accepted changes applied)
+  function getFinalDraftText() {
+    var toApply = currentSuggestions
+      .map(function(s, i) { return { i: i, s: s }; })
+      .filter(function(item) { return !rejected.has(item.i) && item.s && currentText.indexOf(item.s.original) !== -1; })
+      .sort(function(a, b) { return currentText.indexOf(b.s.original) - currentText.indexOf(a.s.original); });
+    var text = currentText;
+    toApply.forEach(function(item) { text = text.replace(item.s.original, item.s.replacement); });
+    return text;
+  }
+
+  function copyFinal() {
+    var text = document.getElementById('finalText').textContent;
     navigator.clipboard.writeText(text).then(function() {
       var btn = event.target;
       var orig = btn.textContent;
@@ -1029,24 +1004,6 @@
     renderAnnotated();
   }
 
-  function copyRevised() {
-    const toApply = currentSuggestions
-      .map((s, i) => ({ i, s }))
-      .filter(({ i, s }) => !rejected.has(i) && s && currentText.indexOf(s.original) !== -1)
-      .sort((a, b) => currentText.indexOf(b.s.original) - currentText.indexOf(a.s.original));
-
-    let text = currentText;
-    for (const { s } of toApply) {
-      text = text.replace(s.original, s.replacement);
-    }
-
-    navigator.clipboard.writeText(text).then(() => {
-      const btn = event.target;
-      const orig = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = orig, 1500);
-    });
-  }
 
   function loadSample() {
     var sample = "The proposed legislation may potentially result in significant reductions to Medicare benefits for senior citizens and other vulnerable populations who are currently reliant on these programs for their healthcare needs. It is our belief that the decision-makers who are responsible for this policy should be made aware of the serious concerns that have been raised by advocacy groups and individual constituents alike.\n\nThe policy in question would adversely impact access to prescription medications, potentially forcing some beneficiaries to make difficult choices between their medical needs and other basic necessities. There could be significant consequences for the healthcare system if these reductions are implemented, including increased emergency room utilization and hospitalizations.\n\nWe respectfully urge Congress to reconsider this approach and work toward solutions that protect the healthcare security of those who have worked their entire lives with the expectation of these guaranteed benefits.";
