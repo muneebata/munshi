@@ -136,6 +136,8 @@ app.post('/api/analyze', async (req, res) => {
       .map(b => b.text)
       .join('');
 
+    console.log('[analyze] stop_reason:', message.stop_reason, '| content blocks:', message.content.length, '| text length:', responseText.length);
+
     let parsed;
     try {
       const cleaned = responseText
@@ -144,8 +146,9 @@ app.post('/api/analyze', async (req, res) => {
         .replace(/```\s*$/i, '')
         .trim();
       parsed = JSON.parse(cleaned);
+      console.log('[analyze] parsed keys:', Object.keys(parsed), '| reactions:', parsed.demographic_reactions?.length ?? 'MISSING', '| suggestions:', parsed.suggestions?.length ?? 'MISSING');
     } catch (e) {
-      console.error('JSON parse error. Raw response:', responseText);
+      console.error('[analyze] JSON parse error. First 500 chars:', responseText.slice(0, 500));
       return res.status(500).json({
         error: 'Failed to parse analysis. Please try again.',
         raw: responseText
