@@ -42,7 +42,14 @@ Return ONLY valid JSON — no preamble, no markdown code blocks, no explanation 
       "category": "word_choice|structure|framing|tone"
     }
   ],
-  "overall_assessment": "Exactly 2 sentences. Sentence 1: Summarize the target audience, the piece's intent, and its core message in plain terms — what this is trying to do and for whom. Sentence 2: Describe how this piece is likely to land emotionally — what a reader will feel, what impression of the author or organization comes through, how it reads in the room."
+  "overall_assessment": "Exactly 2 sentences. Sentence 1: Summarize the piece's intent and its core message in plain terms. Sentence 2: Describe how this piece is likely to land emotionally — what a reader will feel, what impression of the author or organization comes through.",
+  "demographic_reactions": [
+    {
+      "group": "group name",
+      "reaction": "receptive",
+      "insight": "1-2 sentences grounded in specific publicly available polling data explaining how this group responds to this message and why."
+    }
+  ]
 }
 
 Severity guide:
@@ -55,23 +62,24 @@ Rules:
 - "original" must be an exact substring of the submitted text — copy character for character. Do not paraphrase.
 - If the draft is strong, say so and offer fewer suggestions. Do not manufacture suggestions to seem thorough.
 - Never suggest something a generic writing coach would say without the specific message research grounding.
-- Focus on the changes that will most move a persuadable audience.`;
+- Focus on the changes that will most move a persuadable audience.
+- For demographic_reactions: Include 4-6 groups most relevant to the message's topic. Draw on publicly available polling data (Gallup, Pew Research Center, AP-NORC, PRRI, YouGov, Morning Consult, etc.). For healthcare messaging use age cohorts and partisans; for immigration use education and regional splits; for economic policy use income and gender. The "reaction" field must be exactly one of: receptive, mixed, skeptical, resistant. Name specific polls or surveys when possible. Do not use stereotypes.`;
 
 app.post('/api/analyze', async (req, res) => {
-  const { text, docType, venue } = req.body;
+  const { text, docType, intention } = req.body;
 
   if (!text || text.trim().length < 50) {
     return res.status(400).json({ error: 'Please provide a document of at least 50 characters.' });
   }
 
-  const contextLine = (docType || venue)
-    ? '\n\nCONTEXT: This is a ' + (docType || 'document') + (venue ? ' being delivered to ' + venue : '') + '. Every suggestion must be appropriate for this specific format and venue. Do not recommend actions that are inappropriate for the context — for example, do not tell a congressional witness to contact their representative, do not suggest a newspaper op-ed writer address a legislative body directly.'
+  const contextLine = (docType || intention)
+    ? '\n\nCONTEXT: This is a ' + (docType || 'document') + (intention ? '. The author\'s communicative intention is: ' + intention + '. Every suggestion must serve and sharpen this intent.' : '') + ' Do not recommend actions that are inappropriate for the context — for example, do not tell a congressional witness to contact their representative, do not suggest a newspaper op-ed writer address a legislative body directly.'
     : '';
 
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: SYSTEM_PROMPT + contextLine,
       messages: [
         {

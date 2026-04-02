@@ -608,6 +608,83 @@
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Demographic Reactions ── */
+    .reactions-section {
+      margin-bottom: 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .reactions-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .reactions-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .reactions-sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .reactions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 8px;
+    }
+
+    .reaction-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .reaction-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .reaction-group-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .reaction-pill {
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .reaction-pill.receptive { background: rgba(39,174,96,0.12); color: #1a7a3c; }
+    .reaction-pill.mixed     { background: rgba(201,168,76,0.15); color: #7a5e00; }
+    .reaction-pill.skeptical { background: var(--med-bg); color: var(--med); }
+    .reaction-pill.resistant { background: var(--high-bg); color: var(--high); }
+
+    .reaction-insight {
+      font-size: 11.5px;
+      line-height: 1.55;
+      color: var(--text-muted);
+    }
   </style>
 </head>
 <body>
@@ -650,15 +727,14 @@
         <option value="public statement">Public Statement</option>
         <option value="remarks">Remarks</option>
       </select>
-      <select id="venue">
-        <option value="">Venue / audience…</option>
-        <option value="a congressional committee">Congressional Committee</option>
-        <option value="a general newspaper readership">Newspaper / Publication</option>
-        <option value="a press briefing">Press Briefing</option>
-        <option value="a public event">Public Event</option>
-        <option value="a corporate announcement">Corporate Announcement</option>
-        <option value="a nonprofit or advocacy audience">Nonprofit / Advocacy</option>
-        <option value="an inauguration or major ceremony">Inauguration / Ceremony</option>
+      <select id="intention">
+        <option value="">Intention…</option>
+        <option value="strong and assertive — a firm, direct, unapologetic stance that does not hedge">Strong &amp; Assertive</option>
+        <option value="diplomatic — carefully navigating tension without escalating, finding common ground without conceding ground">Diplomatic</option>
+        <option value="authoritative thought leader — evidence-based, academic in tone, positioning the speaker as a credible expert">Thought Leader</option>
+        <option value="vulnerable and personal — humanizing the message with emotional resonance, personal stakes, and historical grounding">Personal &amp; Vulnerable</option>
+        <option value="inspiring and rallying — galvanizing audiences to act or unite, high emotional energy, forward-looking">Inspiring &amp; Rallying</option>
+        <option value="conciliatory — healing across divisions, bridge-building, acknowledging the other side with grace">Conciliatory</option>
       </select>
     </div>
     <div class="pane-footer">
@@ -704,6 +780,7 @@
       <!-- Review tab content -->
       <div id="reviewView" style="display:none;">
         <div class="tone-bar" id="toneBar"></div>
+        <div class="reactions-section" id="reactionsSection" style="display:none;"></div>
         <div class="annotated-text" id="annotatedText"></div>
       </div>
 
@@ -727,6 +804,7 @@
   let currentText = '';
   let currentSuggestions = [];
   let currentAssessment = '';
+  let currentReactions = [];
   let accepted = new Set();
   let rejected = new Set();
   let activeFilter = 'all';
@@ -760,7 +838,7 @@
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, docType: document.getElementById('docType').value, venue: document.getElementById('venue').value })
+        body: JSON.stringify({ text: text, docType: document.getElementById('docType').value, intention: document.getElementById('intention').value })
       });
 
       const data = await res.json();
@@ -768,6 +846,7 @@
 
       currentSuggestions = data.suggestions || [];
       currentAssessment = data.overall_assessment || '';
+      currentReactions = data.demographic_reactions || [];
       renderResults();
     } catch (err) {
       alert('Error: ' + err.message);
@@ -837,7 +916,7 @@
     document.getElementById('finalActions').style.display = tab === 'final' ? 'flex' : 'none';
     document.getElementById('reviewView').style.display = tab === 'review' ? 'block' : 'none';
     document.getElementById('finalView').style.display = tab === 'final' ? 'block' : 'none';
-    if (tab === 'review') { renderToneBar(); renderAnnotated(); }
+    if (tab === 'review') { renderToneBar(); renderReactions(); renderAnnotated(); }
     if (tab === 'final') {
       renderFinalDraft();
       // Reset polish button when switching to final tab
@@ -893,6 +972,36 @@
         ${escHtml(s2)}
       </div>` : ''}
     `;
+  }
+
+  // Demographic reactions
+  function renderReactions() {
+    const section = document.getElementById('reactionsSection');
+    if (!currentReactions || currentReactions.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+
+    const cards = currentReactions.map(function(r) {
+      const pillClass = r.reaction || 'mixed';
+      const label = pillClass.charAt(0).toUpperCase() + pillClass.slice(1);
+      return `<div class="reaction-card">
+        <div class="reaction-card-top">
+          <span class="reaction-group-name">${escHtml(r.group)}</span>
+          <span class="reaction-pill ${escHtml(pillClass)}">${escHtml(label)}</span>
+        </div>
+        <div class="reaction-insight">${escHtml(r.insight)}</div>
+      </div>`;
+    }).join('');
+
+    section.innerHTML = `
+      <div class="reactions-header">
+        <span class="reactions-title">Audience Reactions</span>
+        <span class="reactions-sub">Based on publicly available polling data</span>
+      </div>
+      <div class="reactions-grid">${cards}</div>
+    `;
+    section.style.display = 'block';
   }
 
   // Annotated text
