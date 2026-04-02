@@ -609,59 +609,58 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-    /* ── Demographic Reactions ── */
-    .reactions-section {
-      margin-bottom: 18px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
+    /* ── Audience Landing Section ── */
+    .audience-hero {
+      margin-bottom: 0;
     }
 
-    .reactions-header {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      margin-bottom: 12px;
+    .audience-hero-header {
+      margin-bottom: 16px;
     }
 
-    .reactions-title {
-      font-size: 10px;
+    .audience-hero-title {
+      font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.09em;
-      text-transform: uppercase;
-      color: var(--text-muted);
+      color: var(--navy);
+      display: block;
+      margin-bottom: 3px;
     }
 
-    .reactions-sub {
-      font-size: 10.5px;
+    .audience-hero-sub {
+      font-size: 11.5px;
       color: var(--text-muted);
-      opacity: 0.6;
+      line-height: 1.5;
     }
 
-    .reactions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-      gap: 8px;
+    .reaction-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .reaction-card {
       background: white;
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
+      border-radius: 8px;
+      border-left: 4px solid var(--border);
+      padding: 14px 16px;
     }
+
+    .reaction-card.receptive { border-left-color: #27AE60; }
+    .reaction-card.mixed     { border-left-color: var(--gold); }
+    .reaction-card.skeptical { border-left-color: var(--med); }
+    .reaction-card.resistant { border-left-color: var(--high); }
 
     .reaction-card-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 5px;
+      margin-bottom: 7px;
     }
 
     .reaction-group-name {
-      font-size: 12.5px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 700;
       color: var(--text);
     }
 
@@ -670,7 +669,7 @@
       font-weight: 600;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      padding: 2px 8px;
+      padding: 2px 9px;
       border-radius: 20px;
       white-space: nowrap;
     }
@@ -681,9 +680,76 @@
     .reaction-pill.resistant { background: var(--high-bg); color: var(--high); }
 
     .reaction-insight {
-      font-size: 11.5px;
-      line-height: 1.55;
+      font-size: 12px;
+      line-height: 1.6;
       color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .driving-phrases {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .driving-label {
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 9px;
+    }
+
+    .driving-phrase-item {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--bg);
+    }
+
+    .driving-phrase-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .driving-phrase-original {
+      font-size: 12.5px;
+      font-style: italic;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 4px;
+      padding: 4px 8px;
+      background: var(--bg);
+      border-radius: 4px;
+    }
+
+    .driving-phrase-fix-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 3px;
+      padding: 0 4px;
+    }
+
+    .driving-arrow {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    .driving-phrase-fix {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #1a7a3c;
+      line-height: 1.45;
+    }
+
+    .driving-phrase-why {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding: 0 4px;
     }
   </style>
 </head>
@@ -751,9 +817,11 @@
 
     <!-- Tab bar (hidden until results) -->
     <div class="tab-bar" id="tabBar" style="display:none;">
-      <button class="tab active" id="reviewTab" onclick="setTab('review')">Review</button>
+      <button class="tab active" id="audienceTab" onclick="setTab('audience')">Audience</button>
+      <button class="tab" id="editsTab" onclick="setTab('edits')">Edits</button>
       <button class="tab" id="finalTab" onclick="setTab('final')">Final Draft</button>
-      <div class="tab-actions" id="reviewActions"></div>
+      <div class="tab-actions" id="audienceActions"></div>
+      <div class="tab-actions" id="editsActions" style="display:none;"></div>
       <div class="tab-actions" id="finalActions" style="display:none;">
         <button class="btn-sm" id="polishBtn" onclick="handlePolish()">Polish with Style Guide</button>
         <button class="btn-sm" onclick="copyFinal()">Copy Draft</button>
@@ -774,13 +842,17 @@
       <!-- Loading -->
       <div class="loading-state" id="loadingState">
         <div class="loading-bar"><div class="loading-bar-fill"></div></div>
-        <div class="loading-text">Analyzing message research opportunities…</div>
+        <div class="loading-text">Analyzing audience reactions and message research…</div>
       </div>
 
-      <!-- Review tab content -->
-      <div id="reviewView" style="display:none;">
+      <!-- Audience tab content -->
+      <div id="audienceView" style="display:none;">
         <div class="tone-bar" id="toneBar"></div>
-        <div class="reactions-section" id="reactionsSection" style="display:none;"></div>
+        <div id="audienceReactions"></div>
+      </div>
+
+      <!-- Edits tab content -->
+      <div id="editsView" style="display:none;">
         <div class="annotated-text" id="annotatedText"></div>
       </div>
 
@@ -788,7 +860,6 @@
       <div id="finalView" style="display:none;">
         <div class="final-text" id="finalText"></div>
       </div>
-
 
     </div>
   </div>
@@ -861,7 +932,8 @@
     btn.classList.toggle('loading', on);
     if (on) {
       document.getElementById('emptyState').style.display = 'none';
-      document.getElementById('reviewView').style.display = 'none';
+      document.getElementById('audienceView').style.display = 'none';
+      document.getElementById('editsView').style.display = 'none';
       document.getElementById('finalView').style.display = 'none';
       document.getElementById('tabBar').style.display = 'none';
       document.getElementById('loadingState').classList.add('visible');
@@ -904,22 +976,25 @@
     document.getElementById('loadingState').classList.remove('visible');
     document.getElementById('tabBar').style.display = 'flex';
     closeCard();
-    setTab('review');
+    setTab('audience');
   }
 
   // Tabs
   function setTab(tab) {
     activeTab = tab;
-    document.getElementById('reviewTab').classList.toggle('active', tab === 'review');
+    document.getElementById('audienceTab').classList.toggle('active', tab === 'audience');
+    document.getElementById('editsTab').classList.toggle('active', tab === 'edits');
     document.getElementById('finalTab').classList.toggle('active', tab === 'final');
-    document.getElementById('reviewActions').style.display = tab === 'review' ? 'flex' : 'none';
+    document.getElementById('audienceActions').style.display = tab === 'audience' ? 'flex' : 'none';
+    document.getElementById('editsActions').style.display = tab === 'edits' ? 'flex' : 'none';
     document.getElementById('finalActions').style.display = tab === 'final' ? 'flex' : 'none';
-    document.getElementById('reviewView').style.display = tab === 'review' ? 'block' : 'none';
+    document.getElementById('audienceView').style.display = tab === 'audience' ? 'block' : 'none';
+    document.getElementById('editsView').style.display = tab === 'edits' ? 'block' : 'none';
     document.getElementById('finalView').style.display = tab === 'final' ? 'block' : 'none';
-    if (tab === 'review') { renderToneBar(); renderReactions(); renderAnnotated(); }
+    if (tab === 'audience') { renderToneBar(); renderReactions(); }
+    if (tab === 'edits') { renderAnnotated(); }
     if (tab === 'final') {
       renderFinalDraft();
-      // Reset polish button when switching to final tab
       var btn = document.getElementById('polishBtn');
       btn.textContent = 'Polish with Style Guide';
       btn.disabled = false;
@@ -976,32 +1051,51 @@
 
   // Demographic reactions
   function renderReactions() {
-    const section = document.getElementById('reactionsSection');
+    const section = document.getElementById('audienceReactions');
     if (!currentReactions || currentReactions.length === 0) {
-      section.style.display = 'none';
+      section.innerHTML = '';
       return;
     }
 
     const cards = currentReactions.map(function(r) {
       const pillClass = r.reaction || 'mixed';
       const label = pillClass.charAt(0).toUpperCase() + pillClass.slice(1);
-      return `<div class="reaction-card">
+
+      let phrasesHtml = '';
+      if (r.driving_phrases && r.driving_phrases.length > 0) {
+        const items = r.driving_phrases.map(function(p) {
+          return `<div class="driving-phrase-item">
+            <div class="driving-phrase-original">"${escHtml(p.phrase)}"</div>
+            <div class="driving-phrase-fix-row">
+              <span class="driving-arrow">→</span>
+              <span class="driving-phrase-fix">${escHtml(p.fix)}</span>
+            </div>
+            <div class="driving-phrase-why">${escHtml(p.why)}</div>
+          </div>`;
+        }).join('');
+        phrasesHtml = `<div class="driving-phrases">
+          <div class="driving-label">What's driving this reaction</div>
+          ${items}
+        </div>`;
+      }
+
+      return `<div class="reaction-card ${escHtml(pillClass)}">
         <div class="reaction-card-top">
           <span class="reaction-group-name">${escHtml(r.group)}</span>
           <span class="reaction-pill ${escHtml(pillClass)}">${escHtml(label)}</span>
         </div>
         <div class="reaction-insight">${escHtml(r.insight)}</div>
+        ${phrasesHtml}
       </div>`;
     }).join('');
 
-    section.innerHTML = `
-      <div class="reactions-header">
-        <span class="reactions-title">Audience Reactions</span>
-        <span class="reactions-sub">Based on publicly available polling data</span>
+    section.innerHTML = `<div class="audience-hero">
+      <div class="audience-hero-header">
+        <span class="audience-hero-title">How your message is landing</span>
+        <span class="audience-hero-sub">Based on publicly available polling data — reactions reflect the draft as written.</span>
       </div>
-      <div class="reactions-grid">${cards}</div>
-    `;
-    section.style.display = 'block';
+      <div class="reaction-stack">${cards}</div>
+    </div>`;
   }
 
   // Annotated text

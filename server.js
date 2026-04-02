@@ -47,7 +47,14 @@ Return ONLY valid JSON — no preamble, no markdown code blocks, no explanation 
     {
       "group": "group name",
       "reaction": "receptive",
-      "insight": "1-2 sentences grounded in specific publicly available polling data explaining how this group responds to this message and why."
+      "insight": "1-2 sentences grounded in specific publicly available polling data explaining how this group responds to this message and why.",
+      "driving_phrases": [
+        {
+          "phrase": "exact substring from the submitted text that is most responsible for this group's reaction",
+          "fix": "suggested replacement phrasing",
+          "why": "one sentence on why this specific phrase drives this group's reaction"
+        }
+      ]
     }
   ]
 }
@@ -64,7 +71,7 @@ Rules:
 - If the draft is strong, say so and offer fewer suggestions. Do not manufacture suggestions to seem thorough.
 - Never suggest something a generic writing coach would say without the specific message research grounding.
 - Focus on the changes that will most move a persuadable audience.
-- For demographic_reactions: Include 4-6 groups most relevant to the message's topic. Draw on publicly available polling data (Gallup, Pew Research Center, AP-NORC, PRRI, YouGov, Morning Consult, etc.). For healthcare messaging use age cohorts and partisans; for immigration use education and regional splits; for economic policy use income and gender. The "reaction" field must be exactly one of: receptive, mixed, skeptical, resistant. Name specific polls or surveys when possible. Do not use stereotypes.`;
+- For demographic_reactions: Include 4-6 groups most relevant to the message's topic. Draw on publicly available polling data (Gallup, Pew Research Center, AP-NORC, PRRI, YouGov, Morning Consult, etc.). For healthcare messaging use age cohorts and partisans; for immigration use education and regional splits; for economic policy use income and gender. The "reaction" field must be exactly one of: receptive, mixed, skeptical, resistant. Name specific polls or surveys when possible. Do not use stereotypes. For driving_phrases: include 1-3 per group. Each "phrase" must be an exact substring of the submitted text — copy character for character. Choose the phrases that most specifically drive this group's reaction. The "fix" should be a direct replacement. If a group's reaction is driven by the overall message rather than a specific phrase, pick the single passage that best represents what is landing poorly.`;
 
 const DOC_TYPE_DIRECTIVES = {
   'congressional testimony': 'FORMAT — Congressional testimony: formal on-the-record document with structured sections. Severity adjustments: bureaucratic jargon obscuring meaning in the committee record → high; passive constructions hiding who is responsible → high; weak or absent congressional ask (the CTA is a specific request of Congress) → high. Do NOT suggest the witness contact their representative or take any action outside the scope of delivering testimony. Structural flags: no salutation, no organized sections, no clear ask → flag as structural issues.',
