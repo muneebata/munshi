@@ -30,19 +30,9 @@ The critical difference:
 - Generic (useless): "Use active voice" or "avoid jargon"
 - Message intelligence (valuable): "'Will force seniors to choose between medication and groceries' tests significantly better than 'may adversely impact Medicare beneficiaries' — the hedged passive construction reduces perceived severity, removes accountability from the responsible party, and places the burden on a bureaucratic abstraction rather than a human being"
 
-Return ONLY valid JSON — no preamble, no markdown code blocks, no explanation outside the JSON. Just the raw JSON object.
+Return ONLY valid JSON — no preamble, no markdown code blocks, no explanation outside the JSON. Just the raw JSON object. You MUST include all three top-level fields: demographic_reactions, overall_assessment, and suggestions. Do not omit any field.
 
 {
-  "suggestions": [
-    {
-      "original": "exact phrase from the submitted text — must match character for character, including punctuation and capitalization",
-      "replacement": "suggested alternative phrasing",
-      "rationale": "specific explanation grounded in message research — what this tests better with, why the psychology works, what the research shows. Be concrete. Name the effect. Quantify when you can approximate it.",
-      "severity": "high|medium|low",
-      "category": "word_choice|structure|framing|tone"
-    }
-  ],
-  "overall_assessment": "Exactly 2 sentences. Sentence 1: Summarize the piece's intent and its core message in plain terms. Sentence 2: Describe how this piece is likely to land emotionally — what a reader will feel, what impression of the author or organization comes through.",
   "demographic_reactions": [
     {
       "group": "group name",
@@ -55,6 +45,16 @@ Return ONLY valid JSON — no preamble, no markdown code blocks, no explanation 
           "why": "one sentence on why this specific phrase drives this group's reaction"
         }
       ]
+    }
+  ],
+  "overall_assessment": "Exactly 2 sentences. Sentence 1: Summarize the piece's intent and its core message in plain terms. Sentence 2: Describe how this piece is likely to land emotionally — what a reader will feel, what impression of the author or organization comes through.",
+  "suggestions": [
+    {
+      "original": "exact phrase from the submitted text — must match character for character, including punctuation and capitalization",
+      "replacement": "suggested alternative phrasing",
+      "rationale": "specific explanation grounded in message research — what this tests better with, why the psychology works, what the research shows. Be concrete. Name the effect. Quantify when you can approximate it.",
+      "severity": "high|medium|low",
+      "category": "word_choice|structure|framing|tone"
     }
   ]
 }
@@ -106,20 +106,35 @@ app.post('/api/analyze', async (req, res) => {
     ? '\n\n---\nANALYSIS DIRECTIVES — these override default severity judgments and must shape every suggestion and demographic reaction in this analysis:\n\n' + [docDirective, intentionDirective].filter(Boolean).join('\n\n')
     : '';
 
-  try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8192,
-      system: SYSTEM_PROMPT + contextLine,
-      messages: [
-        {
-          role: 'user',
-          content: 'Analyze this draft for message research opportunities:\n\n' + text
-        }
-      ]
-    });
+  const userPrompt = 'Search for recent publicly available polling data on how key demographic groups respond to messages about the topic of this draft, then analyze the draft:\n\n' + text;
 
-    const responseText = message.content[0].text;
+  async function callClaude(useWebSearch) {
+    const params = {
+      model: 'claude-sonnet-4-6',
+      max_tokens: 16000,
+      system: SYSTEM_PROMPT + contextLine,
+      messages: [{ role: 'user', content: userPrompt }]
+    };
+    if (useWebSearch) {
+      params.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
+    }
+    return client.messages.create(params);
+  }
+
+  try {
+    let message;
+    try {
+      message = await callClaude(true);
+    } catch (searchErr) {
+      console.warn('Web search unavailable, falling back:', searchErr.message);
+      message = await callClaude(false);
+    }
+
+    // Handle multi-block responses (web search tool may produce multiple content blocks)
+    const responseText = message.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('');
 
     let parsed;
     try {
