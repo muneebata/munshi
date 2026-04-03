@@ -342,18 +342,27 @@
 
     .loading-state.visible { display: flex; }
 
-    .loading-timer {
-      font-size: 42px;
-      font-weight: 200;
-      color: var(--navy);
-      letter-spacing: 0.04em;
-      opacity: 0.3;
-      font-variant-numeric: tabular-nums;
+    .loading-bar {
+      width: 180px; height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 2px;
+      animation: loading-sweep 1.8s ease-in-out infinite;
+    }
+
+    @keyframes loading-sweep {
+      0%   { width: 0%;  margin-left: 0%; }
+      50%  { width: 60%; margin-left: 20%; }
+      100% { width: 0%;  margin-left: 100%; }
     }
 
     .loading-text { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-
-    .loading-subtext { font-size: 11px; color: var(--text-muted); opacity: 0.6; }
 
     /* ── Attachment row ── */
     .attach-row {
@@ -889,9 +898,8 @@
 
       <!-- Loading -->
       <div class="loading-state" id="loadingState">
-        <div class="loading-timer" id="loadingTimer">0:00</div>
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
         <div class="loading-text">Searching polling data and analyzing audience reactions…</div>
-        <div class="loading-subtext">This typically takes 20–40 seconds</div>
       </div>
 
       <!-- Audience tab content -->
@@ -927,8 +935,6 @@
   let currentReactions = [];
   let accepted = new Set();
   let pollingData = '';
-  let loadingInterval = null;
-  let loadingSeconds = 0;
   let rejected = new Set();
   let activeFilter = 'all';
   let activeTab = 'review';
@@ -978,21 +984,6 @@
     }
   }
 
-  function startTimer() {
-    loadingSeconds = 0;
-    document.getElementById('loadingTimer').textContent = '0:00';
-    loadingInterval = setInterval(function() {
-      loadingSeconds++;
-      var m = Math.floor(loadingSeconds / 60);
-      var s = loadingSeconds % 60;
-      document.getElementById('loadingTimer').textContent = m + ':' + (s < 10 ? '0' : '') + s;
-    }, 1000);
-  }
-
-  function stopTimer() {
-    if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
-  }
-
   function handleFileAttach(event) {
     var file = event.target.files[0];
     if (!file) return;
@@ -1022,9 +1013,7 @@
       document.getElementById('finalView').style.display = 'none';
       document.getElementById('tabBar').style.display = 'none';
       document.getElementById('loadingState').classList.add('visible');
-      startTimer();
     } else {
-      stopTimer();
       document.getElementById('loadingState').classList.remove('visible');
     }
   }
