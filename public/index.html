@@ -337,32 +337,70 @@
       align-items: center;
       justify-content: center;
       height: 100%;
-      gap: 14px;
+      gap: 10px;
     }
 
     .loading-state.visible { display: flex; }
 
-    .loading-bar {
-      width: 180px; height: 2px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .loading-bar-fill {
-      height: 100%;
-      background: var(--gold);
-      border-radius: 2px;
-      animation: loading-sweep 1.8s ease-in-out infinite;
-    }
-
-    @keyframes loading-sweep {
-      0% { width: 0%; margin-left: 0%; }
-      50% { width: 60%; margin-left: 20%; }
-      100% { width: 0%; margin-left: 100%; }
+    .loading-timer {
+      font-size: 42px;
+      font-weight: 200;
+      color: var(--navy);
+      letter-spacing: 0.04em;
+      opacity: 0.3;
+      font-variant-numeric: tabular-nums;
     }
 
     .loading-text { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+    .loading-subtext { font-size: 11px; color: var(--text-muted); opacity: 0.6; }
+
+    /* ── Attachment row ── */
+    .attach-row {
+      padding: 8px 18px;
+      border-top: 1px solid var(--border);
+      background: white;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .attach-btn {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: 5px;
+      padding: 5px 11px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .attach-btn:hover { border-color: var(--gold); color: var(--text); }
+
+    .attach-indicator {
+      display: none;
+      align-items: center;
+      gap: 7px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 10px;
+    }
+
+    .attach-indicator.visible { display: flex; }
+
+    .attach-name { font-weight: 500; color: var(--text); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .attach-remove { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 15px; line-height: 1; padding: 0; margin-left: 2px; }
+    .attach-remove:hover { color: var(--high); }
 
     /* ── Tone Bar ── */
     .tone-bar {
@@ -759,15 +797,13 @@
   <div class="logo">
     <svg class="logo-mark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <polygon points="50,4 58.3,32.8 85.4,19.1 71.7,46.2 100,50 71.7,53.8 85.4,80.9 58.3,67.2 50,96 41.7,67.2 14.6,80.9 28.3,53.8 0,50 28.3,46.2 14.6,19.1 41.7,32.8" fill="#C9A84C"/>
-      <circle cx="50" cy="37" r="8" fill="#0D1B2A"/>
-      <circle cx="50" cy="63" r="8" fill="#0D1B2A"/>
-      <circle cx="37" cy="50" r="8" fill="#0D1B2A"/>
-      <circle cx="63" cy="50" r="8" fill="#0D1B2A"/>
-      <circle cx="50" cy="50" r="4" fill="#C9A84C"/>
+      <circle cx="50" cy="40" r="11" fill="white"/>
+      <circle cx="41" cy="57" r="11" fill="white"/>
+      <circle cx="59" cy="57" r="11" fill="white"/>
     </svg>
     <span class="logo-name">MUNSHI</span>
   </div>
-  <span class="tagline">Your public image matters and every word counts.</span>
+  <span class="tagline">Every word counts.</span>
 </header>
 
 <div class="workspace">
@@ -803,6 +839,18 @@
         <option value="conciliatory — healing across divisions, bridge-building, acknowledging the other side with grace">Conciliatory</option>
       </select>
     </div>
+    <div class="attach-row">
+      <input type="file" id="pollingFile" accept=".txt,.csv" style="display:none;" onchange="handleFileAttach(event)">
+      <button class="attach-btn" onclick="document.getElementById('pollingFile').click()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        Add internal / specialized polling
+      </button>
+      <div class="attach-indicator" id="attachIndicator">
+        <span class="attach-name" id="attachName"></span>
+        <button class="attach-remove" onclick="removeAttachment()">×</button>
+      </div>
+    </div>
+
     <div class="pane-footer">
       <button class="sample-link" onclick="loadSample()">Load sample testimony →</button>
       <button class="btn-analyze" id="analyzeBtn" onclick="handleSubmit()">
@@ -841,8 +889,9 @@
 
       <!-- Loading -->
       <div class="loading-state" id="loadingState">
-        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        <div class="loading-timer" id="loadingTimer">0:00</div>
         <div class="loading-text">Searching polling data and analyzing audience reactions…</div>
+        <div class="loading-subtext">This typically takes 20–40 seconds</div>
       </div>
 
       <!-- Audience tab content -->
@@ -877,6 +926,9 @@
   let currentAssessment = '';
   let currentReactions = [];
   let accepted = new Set();
+  let pollingData = '';
+  let loadingInterval = null;
+  let loadingSeconds = 0;
   let rejected = new Set();
   let activeFilter = 'all';
   let activeTab = 'review';
@@ -909,7 +961,7 @@
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, docType: document.getElementById('docType').value, intention: document.getElementById('intention').value })
+        body: JSON.stringify({ text: text, docType: document.getElementById('docType').value, intention: document.getElementById('intention').value, pollingData: pollingData || '' })
       });
 
       const data = await res.json();
@@ -926,6 +978,39 @@
     }
   }
 
+  function startTimer() {
+    loadingSeconds = 0;
+    document.getElementById('loadingTimer').textContent = '0:00';
+    loadingInterval = setInterval(function() {
+      loadingSeconds++;
+      var m = Math.floor(loadingSeconds / 60);
+      var s = loadingSeconds % 60;
+      document.getElementById('loadingTimer').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
+  }
+
+  function handleFileAttach(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      pollingData = e.target.result;
+      document.getElementById('attachName').textContent = file.name;
+      document.getElementById('attachIndicator').classList.add('visible');
+    };
+    reader.readAsText(file);
+  }
+
+  function removeAttachment() {
+    pollingData = '';
+    document.getElementById('pollingFile').value = '';
+    document.getElementById('attachIndicator').classList.remove('visible');
+  }
+
   function setLoading(on) {
     const btn = document.getElementById('analyzeBtn');
     btn.disabled = on;
@@ -937,7 +1022,9 @@
       document.getElementById('finalView').style.display = 'none';
       document.getElementById('tabBar').style.display = 'none';
       document.getElementById('loadingState').classList.add('visible');
+      startTimer();
     } else {
+      stopTimer();
       document.getElementById('loadingState').classList.remove('visible');
     }
   }

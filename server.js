@@ -92,7 +92,7 @@ const INTENTION_DIRECTIVES = {
 };
 
 app.post('/api/analyze', async (req, res) => {
-  const { text, docType, intention } = req.body;
+  const { text, docType, intention, pollingData } = req.body;
 
   if (!text || text.trim().length < 50) {
     return res.status(400).json({ error: 'Please provide a document of at least 50 characters.' });
@@ -106,7 +106,11 @@ app.post('/api/analyze', async (req, res) => {
     ? '\n\n---\nANALYSIS DIRECTIVES — these override default severity judgments and must shape every suggestion and demographic reaction in this analysis:\n\n' + [docDirective, intentionDirective].filter(Boolean).join('\n\n')
     : '';
 
-  const userPrompt = 'Search for recent publicly available polling data on how key demographic groups respond to messages about the topic of this draft, then analyze the draft:\n\n' + text;
+  const proprietaryBlock = pollingData && pollingData.trim()
+    ? '\n\nPROPRIETARY POLLING DATA — treat this as your primary source and prioritize it over general polling knowledge when generating demographic_reactions:\n\n' + pollingData.trim().slice(0, 8000) + '\n\n---\n\n'
+    : '';
+
+  const userPrompt = 'Search for recent publicly available polling data on how key demographic groups respond to messages about the topic of this draft, then analyze the draft:' + proprietaryBlock + '\n\n' + text;
 
   async function callClaude(useWebSearch) {
     const params = {
